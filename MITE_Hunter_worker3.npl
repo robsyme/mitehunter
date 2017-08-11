@@ -95,7 +95,7 @@ foreach(keys(%Name_Seq)) {
 	print "BLAST...\n";
 
 	#------------------------------ sometimes using too sensitive search will result in low quality alignment that is difficult to detect TIRs and TSDs
-	system("_blastall_ -i temp_query.fa -d $Database -e $Max_Evalue -p blastn -o temp_blast.out\n");
+	systemsafe("_blastall_ -i temp_query.fa -d $Database -e $Max_Evalue -p blastn -o temp_blast.out\n");
 	
 	print "Searching for homologs by PHI ...\n";
 	open(TF, "temp_blast.out")||die"$!\n";
@@ -111,7 +111,7 @@ foreach(keys(%Name_Seq)) {
 
 	if($No_Hits_Found == 0) {
 		print "Find homologs...\n";
-		system("perl _PHI_ -i temp_blast.out -q temp_query.fa -D $Database -o $Name -M $Min_Pro -d $Max_Gap -I $ID_Tag -n $Max_Output -e $Max_Evalue -l $Edge_Len -r $Edge_Len\n");
+		systemsafe("perl _PHI_ -i temp_blast.out -q temp_query.fa -D $Database -o $Name -M $Min_Pro -d $Max_Gap -I $ID_Tag -n $Max_Output -e $Max_Evalue -l $Edge_Len -r $Edge_Len\n");
 		if(-e "$Name.flank") {
 			$Seq_Num = 0;
 			open(NF, "$Name.flank")||die"2 $!\n";
@@ -125,9 +125,9 @@ foreach(keys(%Name_Seq)) {
 			#----------------------------------- use high resolution blast parameters if homologs number is smaller than ReBlast_Num ---------
 			if($Seq_Num < $ReBlast_Num) {
 				print "$Seq_Num < $ReBlast_Num blast again using -G -4 -E -2 -q -3 -r 2 ...\n";
-				system("_blastall_ -i temp_query.fa -d $Database -e $Max_Evalue -p blastn -o temp_blast.out -G -4 -E -2 -q -3 -r 2\n");
+				systemsafe("_blastall_ -i temp_query.fa -d $Database -e $Max_Evalue -p blastn -o temp_blast.out -G 4 -E 2 -q -3 -r 2\n");
 				print "Find homologs...\n";
-				system("perl _PHI_ -i temp_blast.out -q temp_query.fa -D $Database -o $Name -M $Min_Pro -d $Max_Gap -I $ID_Tag -n $Max_Output -e $Max_Evalue -l $Edge_Len -r $Edge_Len\n");
+				systemsafe("perl _PHI_ -i temp_blast.out -q temp_query.fa -D $Database -o $Name -M $Min_Pro -d $Max_Gap -I $ID_Tag -n $Max_Output -e $Max_Evalue -l $Edge_Len -r $Edge_Len\n");
 				$Seq_Num = 0;
 				open(NF, "$Name.flank")||die"2 $!\n";
 				while(<NF>) {
@@ -142,10 +142,10 @@ foreach(keys(%Name_Seq)) {
 			if($Seq_Num >= $Min_Copy) {
 				print "multiple alignment...\n";
 				if(length($Raw_Seq) < $Long_Muscle) {
-					system("_muscle_ -in $Name.flank -out $Name.aln");
+					systemsafe("_muscle_ -in $Name.flank -out $Name.aln");
 				}else{
 					print "(length < $Long_Muscle run muscle with -maxiters 1 -diags)\n";
-					system("_muscle_ -in $Name.flank -out $Name.aln -maxiters 1 -diags");
+					systemsafe("_muscle_ -in $Name.flank -out $Name.aln -maxiters 1 -diags");
 				}
 
 				
@@ -258,17 +258,17 @@ foreach(keys(%Name_Seq)) {
 					print "$Add_Filted_Num with additional sequences were filtered out\n";
 
 					if(length($Raw_Seq) < $Long_Muscle) {
-						system("_muscle_ -in $Name.flank -out $Name.aln");
+						systemsafe("_muscle_ -in $Name.flank -out $Name.aln");
 					}else{
 						print "(length < $Long_Muscle run muscle with -maxiters 1 -diags)\n";
-						system("_muscle_ -in $Name.flank -out $Name.aln -maxiters 1 -diags");
+						systemsafe("_muscle_ -in $Name.flank -out $Name.aln -maxiters 1 -diags");
 					}
 				}
 
 				#----------------------------------------- identify whether it is a TE or not ----------------------------
-				system("perl _ITFM_ -i $Name.aln -e $Edge_Len -v $Min_Diverge -m $Min_Copy\n");
+				systemsafe("perl _ITFM_ -i $Name.aln -e $Edge_Len -v $Min_Diverge -m $Min_Copy\n");
 				
-				system("rm $Name.aln\n");
+				systemsafe("rm $Name.aln\n");
 
 				if(-e "$Name.aln.elite") {
 					$CC = consensus_classifier();
@@ -279,10 +279,10 @@ foreach(keys(%Name_Seq)) {
 					}
 				}
 			}
-			system("rm $Name.flank\n");
+			systemsafe("rm $Name.flank\n");
 		}
 	}
-	system("rm temp*\n");
+	systemsafe("rm temp*\n");
 }
 close(OC);
 
@@ -729,5 +729,16 @@ sub seq_matcher {
 		return(1);
 	}else{
 		return(0);
+	}
+}
+
+sub systemsafe {
+	my $cmd = $_[0];
+	my $exitCode = system($cmd);
+	chomp($cmd);
+	if ( $exitCode != 0 ) {
+		die "FAILURE:   '$cmd'\n";
+	} else {
+		print STDERR "SUCCESS:   '$cmd'\n";
 	}
 }

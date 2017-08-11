@@ -49,9 +49,6 @@ $MITE_Num = 1;
 
 $Num = 0;
 foreach(keys(%Name_Seq)) {
-	if($Num % 1000 == 0) {
-		print "$Num\n";
-	}
 	$Num ++;
 
 	$Name = $_;
